@@ -18,6 +18,10 @@ export class TestController {
 
   @Post('setup')
   async setup() {
+    if (!(process.env.NODE_ENV === 'test')) {
+      throw new Error('FORBIDDEN')
+    }
+
     const collections = [
       'role_permissions',
       'role_users',
