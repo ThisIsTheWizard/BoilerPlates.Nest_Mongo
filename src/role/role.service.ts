@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
-import { Prisma, RoleName } from '@prisma/client'
 import type { Role } from '@prisma/client'
+import { Prisma, RoleName } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateRoleDto, ManagePermissionDto, UpdateRoleDto } from './role.dto'
 

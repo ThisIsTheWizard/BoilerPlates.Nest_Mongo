@@ -3,21 +3,17 @@ import { Prisma, Role, RoleName } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { map } from 'lodash'
 
-import { AuthTokenService } from '@/auth-token/auth-token.service'
 import { CommonService } from '@/common/common.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { RoleService } from '@/role/role.service'
 import { CreateUserDto, UpdateUserDto } from '@/user/user.dto'
-import { VerificationTokenService } from '@/verification-token/verification-token.service'
 
 @Injectable()
 export class UserService {
   constructor(
-    private authTokenService: AuthTokenService,
     private commonService: CommonService,
     private prismaService: PrismaService,
-    private roleService: RoleService,
-    private verificationTokenService: VerificationTokenService
+    private roleService: RoleService
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -64,7 +60,15 @@ export class UserService {
   }
 
   async seedTestUsers(roles: Role[]) {
-    const userRole = roles.find((r) => r.name === 'user')
+    const roleLookup = roles.reduce<Record<RoleName, Role | undefined>>(
+      (acc, role) => {
+        acc[role.name] = role
+        return acc
+      },
+      {} as Record<RoleName, Role | undefined>
+    )
+
+    const userRole = roleLookup[RoleName.user]
     const hashedPassword = await this.commonService.hashPassword('password')
     const userData: Array<Prisma.UserCreateInput> = [
       {
@@ -89,6 +93,11 @@ export class UserService {
         status: 'active'
       }
     ]
+
+    const additionalRoleAssignments: Record<string, RoleName[]> = {
+      'test-1@test.com': [RoleName.admin],
+      'test-2@test.com': [RoleName.developer]
+    }
 
     const users = await Promise.all(
       userData.map(async (data) => {
@@ -120,7 +129,39 @@ export class UserService {
       )
     }
 
-    return users.filter((user): user is NonNullable<typeof user> => Boolean(user))
+    await Promise.all(
+      map(users, async (user) => {
+        if (!user?.id) {
+          return
+        }
+
+        const extraRoles = additionalRoleAssignments[user.email] ?? []
+
+        await Promise.all(
+          extraRoles.map(async (roleName) => {
+            const role = roleLookup[roleName]
+            if (!role?.id) {
+              return
+            }
+
+            try {
+              await this.prismaService.roleUser.create({
+                data: {
+                  role_id: role.id,
+                  user_id: user.id
+                }
+              })
+            } catch (error) {
+              if (!(error instanceof PrismaClientKnownRequestError && error.code === 'P2002')) {
+                throw error
+              }
+            }
+          })
+        )
+      })
+    )
+
+    return users
   }
 
   async remove(id: string) {

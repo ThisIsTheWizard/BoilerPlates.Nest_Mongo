@@ -32,6 +32,7 @@ import { VerificationTokenService } from '@/verification-token/verification-toke
 
 @Injectable()
 export class AuthService {
+  // eslint-disable-next-line max-params
   constructor(
     private authTokenService: AuthTokenService,
     private commonService: CommonService,
@@ -127,7 +128,7 @@ export class AuthService {
   async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<TokenResponse> {
     const { access_token, refresh_token } = refreshTokenDto
 
-    const authToken = await this.authTokenService.getAuthToken({ where: { refresh_token } })
+    const authToken = await this.authTokenService.getAuthToken({ where: { access_token, refresh_token } })
     if (!authToken?.id) {
       throw new UnauthorizedException('INVALID_TOKEN')
     }

@@ -1,9 +1,12 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth } from '@nestjs/swagger'
+import { RoleName } from '@prisma/client'
+
+import { Permissions } from '@/decorators/permissions.decorator'
+import { Roles } from '@/decorators/roles.decorator'
+import { User } from '@/decorators/user.decorator'
 
 import { AssignRoleDto, RevokeRoleDto } from '@/auth/auth.dto'
-import { AuthService } from '@/auth/auth.service'
-import { User } from '@/decorators/user.decorator'
 import {
   ChangeEmailDto,
   ChangePasswordDto,
@@ -20,6 +23,12 @@ import {
   VerifyForgotPasswordDto,
   VerifyUserPasswordDto
 } from '@/user/user.dto'
+
+import { AuthGuard } from '@/guards/auth.guard'
+import { PermissionsGuard } from '@/guards/permissions.guard'
+import { RolesGuard } from '@/guards/roles.guard'
+
+import { AuthService } from '@/auth/auth.service'
 
 @Controller('auth')
 export class AuthController {
@@ -51,6 +60,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   logout(@Headers('authorization') authorization: string) {
     const token = authorization?.replace('Bearer ', '')
@@ -58,36 +68,46 @@ export class AuthController {
   }
 
   @Post('change-email')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   changeEmail(@Body() changeEmailDto: ChangeEmailDto, @User('user_id') user_id: string) {
     return this.authService.changeEmail(changeEmailDto.email, user_id)
   }
 
   @Post('cancel-change-email')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   cancelChangeEmail(@Body() changeEmailDto: ChangeEmailDto) {
     return this.authService.cancelChangeEmail(changeEmailDto)
   }
 
   @Post('verify-change-email')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   verifyChangeEmail(@Body() verifyChangeEmailDto: VerifyChangeEmailDto, @User('user_id') user_id: string) {
     return this.authService.verifyChangeEmail(verifyChangeEmailDto, user_id)
   }
 
   @Post('set-user-email')
+  @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(RoleName.admin, RoleName.developer)
+  @Permissions('user.update')
   @ApiBearerAuth()
   setUserEmail(@Body() setUserEmailDto: SetUserEmailDto) {
     return this.authService.setUserEmail(setUserEmailDto)
   }
 
   @Post('change-password')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   changePassword(@Body() changePasswordDto: ChangePasswordDto, @User('user_id') user_id: string) {
     return this.authService.changePassword(changePasswordDto, user_id)
   }
 
   @Post('set-user-password')
+  @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(RoleName.admin, RoleName.developer)
+  @Permissions('user:update')
   @ApiBearerAuth()
   setUserPassword(@Body() setUserPasswordDto: SetUserPasswordDto) {
     return this.authService.setUserPassword(setUserPasswordDto)
@@ -114,24 +134,32 @@ export class AuthController {
   }
 
   @Post('verify-user-password')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   verifyUserPassword(@Body() verifyUserPasswordDto: VerifyUserPasswordDto, @User('user_id') user_id: string) {
     return this.authService.verifyUserPassword(verifyUserPasswordDto, user_id)
   }
 
   @Get('user')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   getAuthUser(@User('user_id') user_id: string) {
     return this.authService.getAuthUser(user_id)
   }
 
   @Post('assign-role')
+  @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(RoleName.admin, RoleName.developer)
+  @Permissions('user:update')
   @ApiBearerAuth()
   assignRole(@Body() assignRoleDto: AssignRoleDto) {
     return this.authService.assignRole(assignRoleDto)
   }
 
   @Post('revoke-role')
+  @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(RoleName.admin, RoleName.developer)
+  @Permissions('user:update')
   @ApiBearerAuth()
   revokeRole(@Body() revokeRoleDto: RevokeRoleDto) {
     return this.authService.revokeRole(revokeRoleDto)
