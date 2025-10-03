@@ -1,0 +1,160 @@
+generator client {
+  binaryTargets = ["native", "linux-arm64-openssl-1.1.x", "linux-arm64-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String               @id @map("_id") @default(auto()) @db.ObjectId
+  created_at              DateTime             @default(now())
+  created_by              String?              @db.ObjectId
+  email                   String               @unique
+  first_name              String?
+  last_name               String?
+  new_email               String?
+  old_passwords           String[]             @default([])
+  password                String?
+  phone_number            String?
+  status                  UserStatus           @default(unverified)
+  updated_at              DateTime             @updatedAt
+
+  auth_tokens             AuthToken[]
+  created_permissions     Permission[]         @relation("CreatedBy")
+  created_role_permissions RolePermission[]     @relation("CreatedBy")
+  created_roles           Role[]               @relation("CreatedBy")
+  role_users              RoleUser[]
+  verification_tokens     VerificationToken[]
+
+  @@map("users")
+}
+
+enum UserStatus {
+  active
+  inactive
+  invited
+  unverified
+}
+
+model Role {
+  id              String           @id @map("_id") @default(auto()) @db.ObjectId
+  created_at      DateTime         @default(now())
+  created_by      String?          @db.ObjectId
+  name            RoleName         @unique
+  updated_at      DateTime         @updatedAt
+
+  creator          User?             @relation("CreatedBy", fields: [created_by], references: [id])
+  role_permissions RolePermission[]
+  role_users       RoleUser[]
+
+  @@map("roles")
+}
+
+enum RoleName {
+  admin
+  developer
+  moderator
+  user
+}
+
+model Permission {
+  id              String             @id @map("_id") @default(auto()) @db.ObjectId
+  action          PermissionAction
+  created_at      DateTime           @default(now())
+  created_by      String?            @db.ObjectId
+  module          PermissionModule
+  updated_at      DateTime           @updatedAt
+
+  creator          User?             @relation("CreatedBy", fields: [created_by], references: [id])
+  role_permissions RolePermission[]
+
+  @@unique([action, module])
+  @@map("permissions")
+}
+
+enum PermissionAction {
+  create
+  read
+  update
+  delete
+}
+
+enum PermissionModule {
+  permission
+  role
+  role_permission
+  role_user
+  user
+}
+
+model RoleUser {
+  id       String @id @map("_id") @default(auto()) @db.ObjectId
+  role_id  String @db.ObjectId
+  user_id  String @db.ObjectId
+
+  role Role @relation(fields: [role_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, role_id])
+  @@map("role_users")
+}
+
+model RolePermission {
+  id                String   @id @map("_id") @default(auto()) @db.ObjectId
+  can_do_the_action Boolean  @default(false)
+  created_at        DateTime @default(now())
+  created_by        String?  @db.ObjectId
+  permission_id     String   @db.ObjectId
+  role_id           String   @db.ObjectId
+  updated_at        DateTime @updatedAt
+
+  creator    User?      @relation("CreatedBy", fields: [created_by], references: [id])
+  permission Permission @relation(fields: [permission_id], references: [id])
+  role       Role       @relation(fields: [role_id], references: [id])
+
+  @@unique([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model AuthToken {
+  id            String   @id @map("_id") @default(auto()) @db.ObjectId
+  created_at    DateTime @default(now())
+  access_token  String   @unique
+  refresh_token String   @unique
+  updated_at    DateTime @updatedAt
+  user_id       String   @db.ObjectId
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("auth_tokens")
+}
+
+model VerificationToken {
+  id         String      @id @map("_id") @default(auto()) @db.ObjectId
+  created_at DateTime    @default(now())
+  email      String
+  expired_at DateTime
+  status     TokenStatus @default(unverified)
+  token      String      @unique
+  type       TokenType
+  updated_at DateTime    @updatedAt
+  user_id    String      @db.ObjectId
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("verification_tokens")
+}
+
+enum TokenType {
+  user_verification
+  forgot_password
+}
+
+enum TokenStatus {
+  unverified
+  verified
+  cancelled
+}

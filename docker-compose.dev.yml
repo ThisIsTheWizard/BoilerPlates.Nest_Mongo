@@ -1,0 +1,148 @@
+services:
+  keyfile-generator:
+    image: mongo
+    container_name: keyfile_generator_dev_container
+    restart: 'no'
+    command: >
+      bash -c "
+        set -e;
+        mkdir -p /data/keyfile;
+        if [ ! -f /data/keyfile/mongo-keyfile ]; then
+          openssl rand -base64 756 > /data/keyfile/mongo-keyfile;
+          echo 'Keyfile generated successfully.';
+        else
+          echo 'Keyfile already exists.';
+        fi;
+        chmod 400 /data/keyfile/mongo-keyfile;
+        chown 999:999 /data/keyfile/mongo-keyfile;
+      "
+    volumes:
+      - keyfile_volume:/data/keyfile
+
+  mongo_one:
+    image: mongo
+    container_name: mongo_one_container
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all', '--keyFile', '/data/keyfile/mongo-keyfile']
+    depends_on:
+      keyfile-generator:
+        condition: service_completed_successfully
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_one_data:/data/db
+      - keyfile_volume:/data/keyfile:ro
+
+  mongo_two:
+    image: mongo
+    container_name: mongo_two_container
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all', '--keyFile', '/data/keyfile/mongo-keyfile']
+    depends_on:
+      keyfile-generator:
+        condition: service_completed_successfully
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongo_two_data:/data/db
+      - keyfile_volume:/data/keyfile:ro
+
+  mongo_init_replica:
+    image: mongo
+    container_name: mongo_init_replica_container
+    depends_on:
+      mongo_one:
+        condition: service_started
+      mongo_two:
+        condition: service_started
+    environment:
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    command: >
+      bash -c "
+        set -e;
+        URI_ONE=\"mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo_one:27017/admin\";
+        URI_TWO=\"mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo_two:27017/admin\";
+        echo 'Waiting for MongoDB nodes to be ready...';
+        until mongosh \"$$URI_ONE\" --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 2; done;
+        until mongosh \"$$URI_TWO\" --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 2; done;
+        echo 'Both nodes are up, ensuring replica set is initialized...';
+        mongosh \"$$URI_ONE\" --eval '
+          const config = {
+            _id: \"rs0\",
+            members: [
+              { _id: 0, host: \"mongo_one:27017\" },
+              { _id: 1, host: \"mongo_two:27017\" }
+            ]
+          };
+          let initialized = false;
+          try {
+            const status = rs.status();
+            initialized = status.ok === 1;
+          } catch (error) {
+            if (error.codeName !== \"NotYetInitialized\") {
+              throw error;
+            }
+          }
+          if (!initialized) {
+            rs.initiate(config);
+          }
+          let retries = 30;
+          while (retries-- > 0) {
+            try {
+              const state = rs.status();
+              if (state.ok === 1 && state.members && state.members.some(member => member.stateStr === \"PRIMARY\")) {
+                quit(0);
+              }
+            } catch (statusError) {
+              if (statusError.codeName !== \"NotYetInitialized\") {
+                throw statusError;
+              }
+            }
+            sleep(1000);
+          }
+          throw new Error(\"Replica set did not reach PRIMARY state in time.\");
+        ';
+        echo 'Replica set ready.';
+      "
+
+  mongo_express:
+    image: mongo-express
+    container_name: mongo_express_container
+    environment:
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
+      ME_CONFIG_MONGODB_URL: ${MONGO_URL}
+    ports:
+      - '8081:8081'
+    depends_on:
+      mongo_init_replica:
+        condition: service_completed_successfully
+    volumes:
+      - mongo_express_data:/app/config
+
+  node_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.Dev
+    container_name: node_server_container
+    ports:
+      - '8000:8000'
+    env_file:
+      - .env
+    depends_on:
+      mongo_init_replica:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  keyfile_volume:
+  mongo_express_data:
+  mongo_one_data:
+  mongo_two_data:

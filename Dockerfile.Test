@@ -1,0 +1,22 @@
+FROM node:22-slim
+
+LABEL org.opencontainers.image.authors="Elias Shekh"
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl procps && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm i -g pnpm
+
+RUN pnpm i
+
+COPY . .
+
+RUN pnpm run nest:build
+
+CMD ["sh", "-c", "pnpm db:generate && pnpm db:push && pnpm nest:dev"]
+
+EXPOSE 8000
