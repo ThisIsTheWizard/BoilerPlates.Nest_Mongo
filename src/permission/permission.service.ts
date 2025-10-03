@@ -17,19 +17,26 @@ export class PermissionService {
   }
 
   async findOne(id: string) {
-    const permission = await this.prisma.permission.findUnique({ where: { id } })
-    if (!permission) {
-      throw new NotFoundException('Permission not found')
-    }
+    try {
+      const permission = await this.prisma.permission.findUnique({ where: { id } })
+      if (!permission) {
+        throw new NotFoundException('Permission not found')
+      }
 
-    return permission
+      return permission
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
+        throw new NotFoundException('Permission not found')
+      }
+      throw error
+    }
   }
 
   async update(id: string, data: UpdatePermissionDto) {
     try {
       return await this.prisma.permission.update({ where: { id }, data })
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
         throw new NotFoundException('Permission not found')
       }
       throw error
@@ -40,7 +47,7 @@ export class PermissionService {
     try {
       return await this.prisma.permission.delete({ where: { id } })
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
         throw new NotFoundException('Permission not found')
       }
       throw error

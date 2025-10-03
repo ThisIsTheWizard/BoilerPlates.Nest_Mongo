@@ -1,6 +1,6 @@
 import { IsPassword } from '@/decorators/password.decorator'
 import { ApiProperty } from '@nestjs/swagger'
-import { IsEmail, IsOptional, IsString, IsUUID } from 'class-validator'
+import { IsEmail, IsMongoId, IsOptional, IsString } from 'class-validator'
 
 export class RegisterDto {
   @ApiProperty()
@@ -76,7 +76,7 @@ export class SetUserEmailDto {
   new_email: string
 
   @ApiProperty()
-  @IsUUID()
+  @IsMongoId()
   user_id: string
 }
 
@@ -96,7 +96,7 @@ export class SetUserPasswordDto {
   password: string
 
   @ApiProperty()
-  @IsUUID()
+  @IsMongoId()
   user_id: string
 }
 
