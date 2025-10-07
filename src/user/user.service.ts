@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { Prisma, Role, RoleName } from '@prisma/client'
+import { Prisma, Role, RoleName, User } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { map } from 'lodash'
 
@@ -60,17 +60,15 @@ export class UserService {
   }
 
   async seedTestUsers(roles: Role[]) {
-    const roleLookup = roles.reduce<Record<RoleName, Role | undefined>>(
-      (acc, role) => {
-        acc[role.name] = role
-        return acc
-      },
-      {} as Record<RoleName, Role | undefined>
-    )
+    const adminRole = roles.find((r) => r.name === 'admin')
+    const developerRole = roles.find((r) => r.name === 'developer')
+    const userRole = roles.find((r) => r.name === 'user')
+    if (!userRole) {
+      throw new Error('USER_ROLE_NOT_FOUND')
+    }
 
-    const userRole = roleLookup[RoleName.user]
     const hashedPassword = await this.commonService.hashPassword('password')
-    const userData: Array<Prisma.UserCreateInput> = [
+    const usersData: Array<Prisma.UserCreateInput> = [
       {
         email: 'test-1@test.com',
         first_name: 'Test',
@@ -94,72 +92,25 @@ export class UserService {
       }
     ]
 
-    const additionalRoleAssignments: Record<string, RoleName[]> = {
-      'test-1@test.com': [RoleName.admin],
-      'test-2@test.com': [RoleName.developer]
+    const users: User[] = []
+    for (const userData of usersData) {
+      const user = await this.prismaService.user.upsert({
+        where: { email: userData.email },
+        update: { email: userData.email },
+        create: userData
+      })
+      users.push(user)
+    }
+    const roleAssignments = map(users, (u) => ({ user_id: u.id, role_id: userRole.id! }))
+
+    if (users[0] && adminRole) {
+      roleAssignments.push({ role_id: adminRole.id, user_id: users[0].id })
+    }
+    if (users[1] && developerRole) {
+      roleAssignments.push({ role_id: developerRole.id, user_id: users[1].id })
     }
 
-    const users = await Promise.all(
-      userData.map(async (data) => {
-        try {
-          return await this.prismaService.user.create({ data })
-        } catch (error) {
-          if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-            return this.prismaService.user.findUnique({ where: { email: data.email } })
-          }
-          throw error
-        }
-      })
-    )
-
-    if (userRole?.id) {
-      await Promise.all(
-        map(users, async (user) => {
-          if (!user?.id) {
-            return
-          }
-          try {
-            await this.prismaService.roleUser.create({ data: { user_id: user.id, role_id: userRole.id } })
-          } catch (error) {
-            if (!(error instanceof PrismaClientKnownRequestError && error.code === 'P2002')) {
-              throw error
-            }
-          }
-        })
-      )
-    }
-
-    await Promise.all(
-      map(users, async (user) => {
-        if (!user?.id) {
-          return
-        }
-
-        const extraRoles = additionalRoleAssignments[user.email] ?? []
-
-        await Promise.all(
-          extraRoles.map(async (roleName) => {
-            const role = roleLookup[roleName]
-            if (!role?.id) {
-              return
-            }
-
-            try {
-              await this.prismaService.roleUser.create({
-                data: {
-                  role_id: role.id,
-                  user_id: user.id
-                }
-              })
-            } catch (error) {
-              if (!(error instanceof PrismaClientKnownRequestError && error.code === 'P2002')) {
-                throw error
-              }
-            }
-          })
-        )
-      })
-    )
+    await this.prismaService.roleUser.createMany({ data: roleAssignments })
 
     return users
   }

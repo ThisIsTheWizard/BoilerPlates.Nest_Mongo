@@ -107,7 +107,7 @@ export class AuthController {
   @Post('set-user-password')
   @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
   @Roles(RoleName.admin, RoleName.developer)
-  @Permissions('user:update')
+  @Permissions('user.update')
   @ApiBearerAuth()
   setUserPassword(@Body() setUserPasswordDto: SetUserPasswordDto) {
     return this.authService.setUserPassword(setUserPasswordDto)
@@ -150,7 +150,7 @@ export class AuthController {
   @Post('assign-role')
   @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
   @Roles(RoleName.admin, RoleName.developer)
-  @Permissions('user:update')
+  @Permissions('user.update')
   @ApiBearerAuth()
   assignRole(@Body() assignRoleDto: AssignRoleDto) {
     return this.authService.assignRole(assignRoleDto)
@@ -159,7 +159,7 @@ export class AuthController {
   @Post('revoke-role')
   @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
   @Roles(RoleName.admin, RoleName.developer)
-  @Permissions('user:update')
+  @Permissions('user.update')
   @ApiBearerAuth()
   revokeRole(@Body() revokeRoleDto: RevokeRoleDto) {
     return this.authService.revokeRole(revokeRoleDto)

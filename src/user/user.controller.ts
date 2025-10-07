@@ -18,35 +18,35 @@ export class UserController {
 
   @Post()
   @ApiBearerAuth()
-  @Permissions('user:create')
+  @Permissions('user.create')
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto)
   }
 
   @Get()
   @ApiBearerAuth()
-  @Permissions('user:read')
+  @Permissions('user.read')
   findAll() {
     return this.userService.findAll()
   }
 
   @Get(':id')
   @ApiBearerAuth()
-  @Permissions('user:read')
+  @Permissions('user.read')
   findOne(@Param('id') id: string) {
     return this.userService.findOne({ where: { id } })
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Permissions('user:update')
+  @Permissions('user.update')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(id, updateUserDto)
   }
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Permissions('user:delete')
+  @Permissions('user.delete')
   remove(@Param('id') id: string) {
     return this.userService.remove(id)
   }

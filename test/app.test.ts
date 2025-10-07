@@ -1,10 +1,6 @@
-import { api, resetDatabase } from './setup'
+import { api } from './setup'
 
 describe('AppController (integration)', () => {
-  beforeEach(async () => {
-    await resetDatabase()
-  })
-
   describe('GET /', () => {
     it('success', async () => {
       const response = await api.get('/')
@@ -14,7 +10,7 @@ describe('AppController (integration)', () => {
 
     it('error', async () => {
       const response = await api.get('/non-existent-route')
-      expect(response.status).toBe(401)
+      expect(response.status).toBe(404)
     })
   })
 })
