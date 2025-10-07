@@ -15,6 +15,8 @@ RUN pnpm i
 
 COPY . .
 
+COPY .env.test .env
+
 RUN pnpm run nest:build
 
 CMD ["sh", "-c", "pnpm db:generate && pnpm db:push && pnpm nest:dev"]
