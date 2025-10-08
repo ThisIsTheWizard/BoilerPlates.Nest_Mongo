@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth } from '@nestjs/swagger'
 import { RoleName } from '@prisma/client'
 
@@ -157,6 +157,7 @@ export class AuthController {
   }
 
   @Post('revoke-role')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RolesGuard, PermissionsGuard)
   @Roles(RoleName.admin, RoleName.developer)
   @Permissions('user.update')

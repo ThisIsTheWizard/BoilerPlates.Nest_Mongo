@@ -4,12 +4,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import 'dotenv/config'
 
 import { AppModule } from '@/app/app.module'
+import { GlobalExceptionFilter } from '@/filters/global-exception.filter'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
   // Enable CORS for all origins
   app.enableCors({ origin: '*' })
+
+  // Global exception filter
+  app.useGlobalFilters(new GlobalExceptionFilter())
 
   // Global validation pipe for request validation
   app.useGlobalPipes(

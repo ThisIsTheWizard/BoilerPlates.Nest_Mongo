@@ -1,5 +1,5 @@
-import { api, prisma } from './setup'
-import { createTestFixtures, cleanupTestData, TestFixtures } from './fixtures'
+import { cleanupTestData, createTestFixtures, TestFixtures } from './fixtures'
+import { api } from './setup'
 
 describe('UserController (integration)', () => {
   let fixtures: TestFixtures
@@ -41,22 +41,30 @@ describe('UserController (integration)', () => {
     })
 
     it('should fail without admin/developer role', async () => {
-      const response = await api.post('/users', {
-        email: 'another@test.com',
-        password: 'Test123!@#'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.regularUser.accessToken}` }
-      })
+      const response = await api.post(
+        '/users',
+        {
+          email: 'another@test.com',
+          password: 'Test123!@#'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.regularUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(403)
     })
 
     it('should fail with invalid email', async () => {
-      const response = await api.post('/users', {
-        ...mockUser,
-        email: 'invalid-email'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
-      })
+      const response = await api.post(
+        '/users',
+        {
+          ...mockUser,
+          email: 'invalid-email'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(400)
     })
 
@@ -68,13 +76,17 @@ describe('UserController (integration)', () => {
     })
 
     it('should fail with weak password', async () => {
-      const response = await api.post('/users', {
-        ...mockUser,
-        email: 'weak@test.com',
-        password: '123'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
-      })
+      const response = await api.post(
+        '/users',
+        {
+          ...mockUser,
+          email: 'weak@test.com',
+          password: '123'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(400)
     })
   })
@@ -168,29 +180,41 @@ describe('UserController (integration)', () => {
     })
 
     it('should fail without admin/developer role', async () => {
-      const response = await api.patch(`/users/${testUserId}`, {
-        first_name: 'Test'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.regularUser.accessToken}` }
-      })
+      const response = await api.patch(
+        `/users/${testUserId}`,
+        {
+          first_name: 'Test'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.regularUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(403)
     })
 
     it('should fail with invalid email format', async () => {
-      const response = await api.patch(`/users/${testUserId}`, {
-        email: 'invalid-email'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
-      })
+      const response = await api.patch(
+        `/users/${testUserId}`,
+        {
+          email: 'invalid-email'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(400)
     })
 
     it('should fail with non-existent user id', async () => {
-      const response = await api.patch('/users/507f1f77bcf86cd799439011', {
-        first_name: 'Test'
-      }, {
-        headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
-      })
+      const response = await api.patch(
+        '/users/507f1f77bcf86cd799439011',
+        {
+          first_name: 'Test'
+        },
+        {
+          headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
+        }
+      )
       expect(response.status).toBe(404)
     })
   })
@@ -226,6 +250,7 @@ describe('UserController (integration)', () => {
       const response = await api.delete(`/users/${testUserId}`, {
         headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
       })
+      console.log(response.data)
       expect(response.status).toBe(404)
     })
   })

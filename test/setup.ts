@@ -6,14 +6,14 @@ import path from 'path'
 config({ path: path.resolve(__dirname, '..', '.env.test'), override: true })
 
 export const api = axios.create({
-  baseURL: `http://127.0.0.1:${process.env.PORT || 8000}`,
+  baseURL: `http://node_server_test:${process.env.PORT || 8000}`,
   timeout: 15000,
   validateStatus: () => true
 })
 
 export const prisma = new PrismaClient({
   datasources: {
-    db: { url: process.env.TEST_DATABASE_URL }
+    db: { url: process.env.DATABASE_URL }
   }
 })
 

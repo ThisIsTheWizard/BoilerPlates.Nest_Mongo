@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth } from '@nestjs/swagger'
 
 import { Permissions } from '@/decorators/permissions.decorator'
@@ -33,8 +33,12 @@ export class UserController {
   @Get(':id')
   @ApiBearerAuth()
   @Permissions('user.read')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne({ where: { id } })
+  async findOne(@Param('id') id: string) {
+    const user = await this.userService.findOne({ where: { id } })
+    if (!user) {
+      throw new NotFoundException('USER_NOT_FOUND')
+    }
+    return user
   }
 
   @Patch(':id')

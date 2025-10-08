@@ -122,8 +122,8 @@ model RolePermission {
 model AuthToken {
   id            String   @id @map("_id") @default(auto()) @db.ObjectId
   created_at    DateTime @default(now())
-  access_token  String   @unique
-  refresh_token String   @unique
+  access_token  String
+  refresh_token String
   updated_at    DateTime @updatedAt
   user_id       String   @db.ObjectId
 

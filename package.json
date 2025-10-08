@@ -11,7 +11,7 @@
     "compose:prod-down": "docker compose -f docker-compose.prod.yml down -v",
     "compose:prod-up": "docker compose -f docker-compose.prod.yml up -d --build",
     "compose:test-down": "docker compose -f docker-compose.test.yml down -v --remove-orphans",
-    "compose:test-up": "docker compose -f docker-compose.test.yml up -d --build --wait",
+    "compose:test-up": "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test_runner test_runner",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -24,9 +24,8 @@
     "nest:build": "nest build",
     "nest:dev": "nest start --watch",
     "nest:start": "nest start",
-    "pretest": "pnpm compose:test-down && pnpm compose:test-up",
     "seed": "pnpm db:seed",
-    "test": "jest"
+    "test": "pnpm compose:test-down && pnpm compose:test-up"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

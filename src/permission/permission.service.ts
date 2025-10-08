@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 import { CreatePermissionDto, UpdatePermissionDto } from '@/permission/permission.dto'
@@ -9,7 +9,14 @@ export class PermissionService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreatePermissionDto) {
-    return this.prisma.permission.create({ data })
+    try {
+      return await this.prisma.permission.create({ data })
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new BadRequestException('Permission already exists')
+      }
+      throw error
+    }
   }
 
   async findAll() {
@@ -20,13 +27,13 @@ export class PermissionService {
     try {
       const permission = await this.prisma.permission.findUnique({ where: { id } })
       if (!permission) {
-        throw new NotFoundException('Permission not found')
+        throw new NotFoundException('PERMISSION_NOT_FOUND')
       }
 
       return permission
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
-        throw new NotFoundException('Permission not found')
+      if (error instanceof PrismaClientKnownRequestError && ['P2023'].includes(error.code)) {
+        throw new BadRequestException('INVALID_PERMISSION_ID')
       }
       throw error
     }
@@ -36,8 +43,14 @@ export class PermissionService {
     try {
       return await this.prisma.permission.update({ where: { id }, data })
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
-        throw new NotFoundException('Permission not found')
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('PERMISSION_NOT_FOUND')
+      }
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new BadRequestException('PERMISSION_ALREADY_EXISTS')
+      }
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2023') {
+        throw new BadRequestException('INVALID_PERMISSION_ID')
       }
       throw error
     }
@@ -47,8 +60,11 @@ export class PermissionService {
     try {
       return await this.prisma.permission.delete({ where: { id } })
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && ['P2023', 'P2025'].includes(error.code)) {
-        throw new NotFoundException('Permission not found')
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('PERMISSION_NOT_FOUND')
+      }
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2023') {
+        throw new BadRequestException('INVALID_PERMISSION_ID')
       }
       throw error
     }

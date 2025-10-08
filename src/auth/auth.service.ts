@@ -43,37 +43,49 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<UserResponse> {
-    const hashedPassword = await this.commonService.hashPassword(registerDto.password)
+    try {
+      const hashedPassword = await this.commonService.hashPassword(registerDto.password)
 
-    const user = await this.prismaService.user.create({
-      data: {
-        ...registerDto,
-        password: hashedPassword
-      }
-    })
-
-    // Assign default user role
-    const userRole = await this.roleService.findOne({ where: { name: 'user' } })
-    if (userRole) {
-      await this.prismaService.roleUser.create({
+      const user = await this.prismaService.user.create({
         data: {
-          user_id: user.id,
-          role_id: userRole.id
+          ...registerDto,
+          password: hashedPassword
         }
       })
-    }
 
-    await this.verificationTokenService.createVerificationToken({
-      data: {
-        email: user.email,
-        expired_at: new Date(Date.now() + 1000 * 5 * 60), // 5 minutes
-        token: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        type: 'user_verification',
-        user_id: user.id
+      // Assign default user role
+      try {
+        const userRole = await this.roleService.findOne({ where: { name: 'user' } })
+        if (userRole) {
+          await this.prismaService.roleUser.create({
+            data: {
+              user_id: user.id,
+              role_id: userRole.id
+            }
+          })
+        }
+      } catch (error) {
+        // If user role doesn't exist, continue without assigning a role
+        console.warn('User role not found, skipping role assignment')
       }
-    })
 
-    return pick(user, ['id', 'email', 'first_name', 'last_name', 'status'])
+      await this.verificationTokenService.createVerificationToken({
+        data: {
+          email: user.email,
+          expired_at: new Date(Date.now() + 1000 * 5 * 60), // 5 minutes
+          token: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+          type: 'user_verification',
+          user_id: user.id
+        }
+      })
+
+      return pick(user, ['id', 'email', 'first_name', 'last_name', 'status'])
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new BadRequestException('EMAIL_ALREADY_EXISTS')
+      }
+      throw error
+    }
   }
 
   async verifyUserEmail(params: VerifyEmailDto): Promise<UserResponse> {
@@ -108,43 +120,53 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<TokenResponse> {
-    const user: UserWithRoles | null = await this.userService.findOne({
-      where: { email: loginDto.email }
-    })
-    if (!user?.id) {
-      throw new UnauthorizedException('USER_DOES_NOT_EXIST')
-    }
-    if (!(await this.commonService.comparePassword(loginDto.password, user?.password || ''))) {
-      throw new UnauthorizedException('INVALID_CREDENTIALS')
-    }
+    try {
+      const user: UserWithRoles | null = await this.userService.findOne({
+        where: { email: loginDto.email }
+      })
+      if (!user?.id) {
+        throw new UnauthorizedException('USER_DOES_NOT_EXIST')
+      }
+      if (!(await this.commonService.comparePassword(loginDto.password, user?.password || ''))) {
+        throw new UnauthorizedException('INVALID_CREDENTIALS')
+      }
 
-    return this.authTokenService.createAuthTokensForUser({
-      email: user.email,
-      roles: user.role_users.map((ru) => ru.role.name),
-      user_id: user.id
-    })
+      return this.authTokenService.createAuthTokensForUser({
+        email: user.email,
+        roles: user.role_users?.map((ru) => ru.role.name) || [],
+        user_id: user.id
+      })
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
+    }
   }
 
   async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<TokenResponse> {
-    const { access_token, refresh_token } = refreshTokenDto
+    try {
+      const { access_token, refresh_token } = refreshTokenDto
 
-    const authToken = await this.authTokenService.getAuthToken({ where: { access_token, refresh_token } })
-    if (!authToken?.id) {
-      throw new UnauthorizedException('INVALID_TOKEN')
+      const authToken = await this.authTokenService.findFirstAuthToken({ where: { access_token, refresh_token } })
+      if (!authToken?.id) {
+        throw new UnauthorizedException('INVALID_TOKEN')
+      }
+
+      const user: UserWithRoles | null = await this.userService.findOne({ where: { id: authToken.user_id } })
+      if (!user?.id) {
+        throw new NotFoundException('USER_NOT_FOUND')
+      }
+
+      await this.authTokenService.deleteAuthToken({ where: { id: authToken.id } })
+
+      return this.authTokenService.createAuthTokensForUser({
+        email: user.email,
+        roles: user.role_users?.map((ru) => ru.role.name) || [],
+        user_id: user.id
+      })
+    } catch (error) {
+      console.error('Refresh token error:', error)
+      throw error
     }
-
-    const user: UserWithRoles | null = await this.userService.findOne({ where: { id: authToken.user_id } })
-    if (!user?.id) {
-      throw new Error('USER_NOT_FOUND')
-    }
-
-    await this.authTokenService.deleteAuthToken({ where: { id: authToken.id } })
-
-    return this.authTokenService.createAuthTokensForUser({
-      email: user.email,
-      roles: user.role_users.map((ru) => ru.role.name),
-      user_id: user.id
-    })
   }
 
   async logout(token?: string): Promise<MessageResponse> {
@@ -276,34 +298,34 @@ export class AuthService {
     const { new_password, old_password } = changePasswordDto
 
     if (!user_id) {
-      throw new Error('UNAUTHORIZED')
+      throw new UnauthorizedException('UNAUTHORIZED')
     }
 
     if (new_password === old_password) {
-      throw new Error('NEW_PASSWORD_IS_SAME_AS_OLD_PASSWORD')
+      throw new BadRequestException('NEW_PASSWORD_IS_SAME_AS_OLD_PASSWORD')
     }
 
     const user = await this.userService.findOne({ where: { id: user_id } })
     if (!user) {
-      throw new Error('USER_DOES_NOT_EXIST')
+      throw new NotFoundException('USER_DOES_NOT_EXIST')
     }
     if (user.status !== 'active') {
-      throw new Error(`USER_IS_${user.status.toUpperCase()}`)
+      throw new BadRequestException(`USER_IS_${user.status.toUpperCase()}`)
     }
 
     if (!user.password) {
-      throw new Error('USER_PASSWORD_NOT_SET')
+      throw new BadRequestException('USER_PASSWORD_NOT_SET')
     }
     const isOldPasswordCorrect = await this.commonService.comparePassword(old_password, user.password)
     if (!isOldPasswordCorrect) {
-      throw new Error('OLD_PASSWORD_IS_INCORRECT')
+      throw new BadRequestException('OLD_PASSWORD_IS_INCORRECT')
     }
 
     // Check if new password was used before
     const oldPasswords = user.old_passwords || []
     for (const oldPass of oldPasswords) {
       if (await this.commonService.comparePassword(new_password, oldPass)) {
-        throw new Error('PASSWORD_IS_ALREADY_USED_BEFORE')
+        throw new BadRequestException('PASSWORD_IS_ALREADY_USED_BEFORE')
       }
     }
 

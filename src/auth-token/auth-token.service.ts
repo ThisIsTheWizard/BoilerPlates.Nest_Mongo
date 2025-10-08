@@ -22,15 +22,20 @@ export class AuthTokenService {
   async createAuthTokensForUser(params: { email: string; roles: string[]; user_id: string }) {
     const { email, roles, user_id } = params || {}
 
-    const access_token = this.commonService.generateJWTToken({ email, roles, sub: user_id, user_id })
-    const refresh_token = this.commonService.generateJWTToken({ sub: user_id, user_id })
+    try {
+      const access_token = this.commonService.generateJWTToken({ email, roles, sub: user_id, user_id })
+      const refresh_token = this.commonService.generateJWTToken({ sub: user_id, user_id }, true)
 
-    const authToken = await this.createAuthToken({ data: { access_token, refresh_token, user_id } })
-    if (!authToken?.id) {
-      throw new Error('COULD_NOT_CREATE_AUTH_TOKEN')
+      const authToken = await this.createAuthToken({ data: { access_token, refresh_token, user_id } })
+      if (!authToken?.id) {
+        throw new Error('COULD_NOT_CREATE_AUTH_TOKEN')
+      }
+
+      return { access_token, refresh_token }
+    } catch (error) {
+      console.error('Error creating auth tokens:', error)
+      throw error
     }
-
-    return { access_token, refresh_token }
   }
 
   async deleteAuthToken(options: Prisma.AuthTokenDeleteArgs) {
@@ -43,6 +48,10 @@ export class AuthTokenService {
 
   async getAuthToken(options: Prisma.AuthTokenFindUniqueArgs) {
     return this.prisma.authToken.findUnique(options)
+  }
+
+  async findFirstAuthToken(options: Prisma.AuthTokenFindFirstArgs) {
+    return this.prisma.authToken.findFirst(options)
   }
 
   async getAuthTokens(options: Prisma.AuthTokenFindManyArgs) {

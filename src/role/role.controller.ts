@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { RoleName } from '@prisma/client'
 
 import { Permissions } from '@/decorators/permissions.decorator'
@@ -53,6 +53,7 @@ export class RoleController {
   }
 
   @Post('permissions/revoke')
+  @HttpCode(HttpStatus.OK)
   @Permissions('role_permission.delete')
   revokePermission(@Body() body: ManagePermissionDto) {
     return this.roleService.revokePermission(body)

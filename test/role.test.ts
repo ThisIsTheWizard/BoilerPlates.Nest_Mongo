@@ -143,13 +143,21 @@ describe('RoleController (integration)', () => {
 
   describe('PATCH /roles/:id', () => {
     it('should update role successfully with admin token', async () => {
+      // Delete the existing developer role to make room for update
+      const existingDeveloperRole = await prisma.role.findUnique({ where: { name: 'developer' } })
+      if (existingDeveloperRole) {
+        await prisma.roleUser.deleteMany({ where: { role_id: existingDeveloperRole.id } })
+        await prisma.rolePermission.deleteMany({ where: { role_id: existingDeveloperRole.id } })
+        await prisma.role.delete({ where: { id: existingDeveloperRole.id } })
+      }
+      
       const response = await api.patch(`/roles/${testRoleId}`, {
-        name: 'user'
+        name: 'developer'
       }, {
         headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
       })
       expect(response.status).toBe(200)
-      expect(response.data.name).toBe('user')
+      expect(response.data.name).toBe('developer')
     })
 
     it('should fail without authorization', async () => {
@@ -277,6 +285,7 @@ describe('RoleController (integration)', () => {
 
   describe('POST /roles/permissions/revoke', () => {
     it('should revoke permission successfully with admin token', async () => {
+      // The permission was assigned in the previous test, so it should exist
       const response = await api.post('/roles/permissions/revoke', {
         role_id: testRoleId,
         permission_id: testPermissionId

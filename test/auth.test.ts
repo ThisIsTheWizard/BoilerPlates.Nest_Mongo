@@ -78,9 +78,16 @@ describe('AuthController (integration)', () => {
 
   describe('POST /auth/refresh-token', () => {
     it('should refresh token successfully', async () => {
+      // First login to get fresh tokens
+      const loginResponse = await api.post('/auth/login', {
+        email: fixtures.adminUser.email,
+        password: 'Admin123!@#'
+      })
+      expect(loginResponse.status).toBe(201)
+
       const response = await api.post('/auth/refresh-token', {
-        access_token: fixtures.adminUser.accessToken,
-        refresh_token: fixtures.adminUser.refreshToken
+        access_token: loginResponse.data.access_token,
+        refresh_token: loginResponse.data.refresh_token
       })
       expect(response.status).toBe(201)
       expect(response.data).toHaveProperty('access_token')

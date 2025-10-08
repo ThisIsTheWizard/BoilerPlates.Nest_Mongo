@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma, Role, RoleName, User } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { map } from 'lodash'
@@ -17,13 +17,20 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await this.commonService.hashPassword(createUserDto.password)
-    return this.prismaService.user.create({
-      data: {
-        ...createUserDto,
-        password: hashedPassword
+    try {
+      const hashedPassword = await this.commonService.hashPassword(createUserDto.password)
+      return await this.prismaService.user.create({
+        data: {
+          ...createUserDto,
+          password: hashedPassword
+        }
+      })
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new BadRequestException('EMAIL_ALREADY_EXISTS')
       }
-    })
+      throw error
+    }
   }
 
   async findAll() {
@@ -39,21 +46,35 @@ export class UserService {
   }
 
   async findOne(options: Prisma.UserFindUniqueArgs) {
-    return this.prismaService.user.findUnique({
-      ...options,
-      include: { ...options?.include, role_users: { include: { role: true } } }
-    })
+    try {
+      const user = await this.prismaService.user.findUnique({
+        ...options,
+        include: { ...options?.include, role_users: { include: { role: true } } }
+      })
+      if (!user && options.where?.id) {
+        return null // Let controller handle 404 for non-existent users
+      }
+      return user
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2023') {
+        throw new BadRequestException('INVALID_USER_ID')
+      }
+      throw error
+    }
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      return this.prismaService.user.update({
+      return await this.prismaService.user.update({
         where: { id },
         data: updateUserDto
       })
-    } catch (error: unknown) {
-      if (error instanceof Object && 'code' in error && error.code === 'P2025') {
-        throw new Error('USER_NOT_FOUND')
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('USER_NOT_FOUND')
+      }
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2023') {
+        throw new BadRequestException('INVALID_USER_ID')
       }
       throw error
     }
@@ -117,12 +138,15 @@ export class UserService {
 
   async remove(id: string) {
     try {
-      return this.prismaService.user.delete({
+      return await this.prismaService.user.delete({
         where: { id }
       })
-    } catch (error: unknown) {
-      if (error instanceof Object && 'code' in error && error.code === 'P2025') {
-        throw new Error('USER_NOT_FOUND')
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException('USER_NOT_FOUND')
+      }
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2023') {
+        throw new BadRequestException('INVALID_USER_ID')
       }
       throw error
     }

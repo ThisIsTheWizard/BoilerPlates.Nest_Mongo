@@ -25,6 +25,7 @@ export class AssignRoleDto {
 }
 
 export class ManagePermissionDto {
+  @IsOptional()
   @IsBoolean()
   can_do_the_action?: boolean
 

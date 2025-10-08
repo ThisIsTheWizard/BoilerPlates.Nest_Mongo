@@ -15,13 +15,24 @@ describe('PermissionController (integration)', () => {
 
   describe('POST /permissions', () => {
     it('should create permission successfully with admin token', async () => {
-      // First delete if exists to avoid conflicts
-      await prisma.permission.deleteMany({ 
-        where: { 
-          action: 'update',
-          module: 'role_user'
-        } 
+      // First delete role_permissions that reference this permission to avoid conflicts
+      const existingPermission = await prisma.permission.findUnique({
+        where: {
+          action_module: {
+            action: 'update',
+            module: 'role_user'
+          }
+        }
       })
+      
+      if (existingPermission) {
+        await prisma.rolePermission.deleteMany({
+          where: { permission_id: existingPermission.id }
+        })
+        await prisma.permission.delete({
+          where: { id: existingPermission.id }
+        })
+      }
       
       const response = await api.post('/permissions', {
         action: 'update',
@@ -164,6 +175,21 @@ describe('PermissionController (integration)', () => {
 
   describe('PATCH /permissions/:id', () => {
     it('should update permission successfully with admin token', async () => {
+      // First check if 'delete' + 'role_user' combination exists and delete it
+      const existingPermission = await prisma.permission.findUnique({
+        where: {
+          action_module: {
+            action: 'delete',
+            module: 'role_user'
+          }
+        }
+      })
+      
+      if (existingPermission && existingPermission.id !== testPermissionId) {
+        await prisma.rolePermission.deleteMany({ where: { permission_id: existingPermission.id } })
+        await prisma.permission.delete({ where: { id: existingPermission.id } })
+      }
+      
       const response = await api.patch(`/permissions/${testPermissionId}`, {
         action: 'delete'
       }, {
@@ -217,6 +243,21 @@ describe('PermissionController (integration)', () => {
     })
 
     it('should update permission module successfully', async () => {
+      // First check if 'delete' + 'user' combination exists and delete it
+      const existingPermission = await prisma.permission.findUnique({
+        where: {
+          action_module: {
+            action: 'delete',
+            module: 'user'
+          }
+        }
+      })
+      
+      if (existingPermission && existingPermission.id !== testPermissionId) {
+        await prisma.rolePermission.deleteMany({ where: { permission_id: existingPermission.id } })
+        await prisma.permission.delete({ where: { id: existingPermission.id } })
+      }
+      
       const response = await api.patch(`/permissions/${testPermissionId}`, {
         module: 'user'
       }, {

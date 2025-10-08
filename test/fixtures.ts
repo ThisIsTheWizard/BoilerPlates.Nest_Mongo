@@ -132,22 +132,31 @@ async function createUserWithRole(email: string, password: string, roleId: strin
     }
   })
 
+  // Wait a bit for the server to be ready
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
   // Login to get tokens
-  const loginResponse = await api.post('/auth/login', {
-    email,
-    password
-  })
+  try {
+    const loginResponse = await api.post('/auth/login', {
+      email,
+      password
+    })
 
-  if (loginResponse.status !== 201) {
-    throw new Error(`Failed to login user ${email}: ${loginResponse.status}`)
-  }
+    if (loginResponse.status !== 201) {
+      console.error(`Login failed for ${email}:`, loginResponse.status, loginResponse.data)
+      throw new Error(`Failed to login user ${email}: ${loginResponse.status} - ${JSON.stringify(loginResponse.data)}`)
+    }
 
-  return {
-    id: user.id,
-    email,
-    password,
-    accessToken: loginResponse.data.access_token,
-    refreshToken: loginResponse.data.refresh_token
+    return {
+      id: user.id,
+      email,
+      password,
+      accessToken: loginResponse.data.access_token,
+      refreshToken: loginResponse.data.refresh_token
+    }
+  } catch (error) {
+    console.error(`Error during login for ${email}:`, error)
+    throw error
   }
 }
 

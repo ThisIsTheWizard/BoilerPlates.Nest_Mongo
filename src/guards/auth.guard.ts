@@ -24,59 +24,63 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('UNAUTHORIZED')
     }
 
-    const decoded = this.commonService.verifyJWTToken(token) || {}
-    const { user_id } = decoded as { email?: string; user_id?: string }
-    if (!user_id) {
-      throw new UnauthorizedException('UNAUTHORIZED')
-    }
+    try {
+      const decoded = this.commonService.verifyJWTToken(token) || {}
+      const { user_id } = decoded as { email?: string; user_id?: string }
+      if (!user_id) {
+        throw new UnauthorizedException('UNAUTHORIZED')
+      }
 
-    const user = await this.prismaService.user.findUnique({
-      where: { id: user_id },
-      include: {
-        role_users: {
-          include: {
-            role: {
-              include: {
-                role_permissions: {
-                  include: { permission: true }
+      const user = await this.prismaService.user.findUnique({
+        where: { id: user_id },
+        include: {
+          role_users: {
+            include: {
+              role: {
+                include: {
+                  role_permissions: {
+                    include: { permission: true }
+                  }
                 }
               }
             }
           }
         }
-      }
-    })
-    if (!user?.id) {
-      throw new UnauthorizedException('UNAUTHORIZED')
-    }
-
-    const roles = new Set<RoleName>()
-    const permissions = new Set<string>()
-
-    user.role_users.forEach((roleUser) => {
-      const role = roleUser.role
-      if (!role) {
-        return
+      })
+      if (!user?.id) {
+        throw new UnauthorizedException('UNAUTHORIZED')
       }
 
-      roles.add(role.name)
-      role.role_permissions?.forEach((rolePermission) => {
-        if (!rolePermission.can_do_the_action || !rolePermission.permission) {
+      const roles = new Set<RoleName>()
+      const permissions = new Set<string>()
+
+      user.role_users.forEach((roleUser) => {
+        const role = roleUser.role
+        if (!role) {
           return
         }
 
-        const { action, module } = rolePermission.permission
-        permissions.add(`${module}.${action}`)
+        roles.add(role.name)
+        role.role_permissions?.forEach((rolePermission) => {
+          if (!rolePermission.can_do_the_action || !rolePermission.permission) {
+            return
+          }
+
+          const { action, module } = rolePermission.permission
+          permissions.add(`${module}.${action}`)
+        })
       })
-    })
 
-    request.user = {
-      email: user.email,
-      permissions: Array.from(permissions),
-      roles: Array.from(roles),
-      user_id: user.id
+      request.user = {
+        email: user.email,
+        permissions: Array.from(permissions),
+        roles: Array.from(roles),
+        user_id: user.id
+      }
+
+      return true
+    } catch (error) {
+      throw new UnauthorizedException('UNAUTHORIZED')
     }
-
-    return true
   }
 }
