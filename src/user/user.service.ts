@@ -91,21 +91,21 @@ export class UserService {
     const hashedPassword = await this.commonService.hashPassword('password')
     const usersData: Array<Prisma.UserCreateInput> = [
       {
-        email: 'test-1@test.com',
+        email: 'test-1@wizardcld.com',
         first_name: 'Test',
         last_name: 'User 1',
         password: hashedPassword,
         status: 'active'
       },
       {
-        email: 'test-2@test.com',
+        email: 'test-2@wizardcld.com',
         first_name: 'Test',
         last_name: 'User 2',
         password: hashedPassword,
         status: 'active'
       },
       {
-        email: 'test-3@test.com',
+        email: 'test-3@wizardcld.com',
         first_name: 'Test',
         last_name: 'User 3',
         password: hashedPassword,

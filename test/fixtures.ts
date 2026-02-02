@@ -40,7 +40,7 @@ export async function createTestFixtures(): Promise<TestFixtures> {
   const adminUser = await createUserWithRole('admin@wizardcld.com', 'Admin123!@#', roles.admin.id)
   
   // Create regular user
-  const regularUser = await createUserWithRole('user@test.com', 'User123!@#', roles.user.id)
+  const regularUser = await createUserWithRole('user@wizardcld.com', 'User123!@#', roles.user.id)
 
   return {
     adminUser,

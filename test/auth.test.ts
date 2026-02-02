@@ -14,7 +14,7 @@ describe('AuthController (integration)', () => {
 
   describe('POST /auth/register', () => {
     const newUser = {
-      email: 'newuser@test.com',
+      email: 'newuser@wizardcld.com',
       password: 'NewUser123!@#',
       first_name: 'New',
       last_name: 'User'
@@ -41,7 +41,7 @@ describe('AuthController (integration)', () => {
     it('should fail with weak password', async () => {
       const response = await api.post('/auth/register', {
         ...newUser,
-        email: 'weak@test.com',
+        email: 'weak@wizardcld.com',
         password: '123'
       })
       expect(response.status).toBe(400)
@@ -61,7 +61,7 @@ describe('AuthController (integration)', () => {
 
     it('should fail with invalid email', async () => {
       const response = await api.post('/auth/login', {
-        email: 'nonexistent@test.com',
+        email: 'nonexistent@wizardcld.com',
         password: 'Admin123!@#'
       })
       expect(response.status).toBe(401)
@@ -191,7 +191,7 @@ describe('AuthController (integration)', () => {
 
     it('should fail with non-existent email', async () => {
       const response = await api.post('/auth/forgot-password', {
-        email: 'nonexistent@test.com'
+        email: 'nonexistent@wizardcld.com'
       })
       expect(response.status).toBe(404)
     })
@@ -272,7 +272,7 @@ describe('AuthController (integration)', () => {
           '/auth/set-user-email',
           {
             user_id: fixtures.regularUser.id,
-            new_email: 'updated@test.com'
+            new_email: 'updated@wizardcld.com'
           },
           {
             headers: { authorization: `Bearer ${fixtures.adminUser.accessToken}` }
@@ -286,7 +286,7 @@ describe('AuthController (integration)', () => {
           '/auth/set-user-email',
           {
             user_id: fixtures.regularUser.id,
-            new_email: 'test@test.com'
+            new_email: 'test@wizardcld.com'
           },
           {
             headers: { authorization: `Bearer ${fixtures.regularUser.accessToken}` }

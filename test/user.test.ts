@@ -34,7 +34,7 @@ describe('UserController (integration)', () => {
 
     it('should fail without authorization', async () => {
       const response = await api.post('/users', {
-        email: 'another@test.com',
+        email: 'another@wizardcld.com',
         password: 'Test123!@#'
       })
       expect(response.status).toBe(401)
@@ -44,7 +44,7 @@ describe('UserController (integration)', () => {
       const response = await api.post(
         '/users',
         {
-          email: 'another@test.com',
+          email: 'another@wizardcld.com',
           password: 'Test123!@#'
         },
         {
@@ -80,7 +80,7 @@ describe('UserController (integration)', () => {
         '/users',
         {
           ...mockUser,
-          email: 'weak@test.com',
+          email: 'weak@wizardcld.com',
           password: '123'
         },
         {
