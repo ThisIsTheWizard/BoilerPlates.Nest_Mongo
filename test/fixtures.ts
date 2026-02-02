@@ -37,7 +37,7 @@ export async function createTestFixtures(): Promise<TestFixtures> {
   const permissions = await prisma.permission.findMany()
 
   // Create admin user
-  const adminUser = await createUserWithRole('admin@test.com', 'Admin123!@#', roles.admin.id)
+  const adminUser = await createUserWithRole('admin@wizardcld.com', 'Admin123!@#', roles.admin.id)
   
   // Create regular user
   const regularUser = await createUserWithRole('user@test.com', 'User123!@#', roles.user.id)

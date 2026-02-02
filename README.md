@@ -170,5 +170,5 @@ Feel free to use and modify it for your projects.
 
 ---
 
-👋 Created by [Elias Shekh](https://sheikhthewizard.world)
+👋 Created by [Elias Shekh](https://portfolio.wizardcld.com)
 If you find this useful, ⭐ the repo or reach out!
