@@ -1,12 +1,14 @@
 import eslint from '@eslint/js'
 import importPlugin from 'eslint-plugin-import'
 import prettierPlugin from 'eslint-plugin-prettier'
+import eslintConfigPrettier from 'eslint-config-prettier'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  eslintConfigPrettier,
   {
     languageOptions: {
       ecmaVersion: 'latest',
@@ -25,8 +27,6 @@ export default tseslint.config(
       'import/extensions': ['error', 'never', { ts: 'never' }],
       'import/named': 'error',
       'import/no-relative-packages': 'error',
-      indent: ['error', 2, { SwitchCase: 1 }],
-      'linebreak-style': ['error', 'unix'],
       'no-prototype-builtins': 'off',
       'no-underscore-dangle': 'off',
       'no-unneeded-ternary': 'off',
@@ -36,8 +36,6 @@ export default tseslint.config(
       'one-var': ['error', { const: 'never' }],
       'prefer-const': 'error',
       'prettier/prettier': ['error'],
-      quotes: ['error', 'single', { avoidEscape: true }],
-      semi: ['error', 'never'],
       'max-params': ['error', 4],
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',

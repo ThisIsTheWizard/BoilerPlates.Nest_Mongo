@@ -66,7 +66,7 @@ export class AuthService {
         }
       } catch (error) {
         // If user role doesn't exist, continue without assigning a role
-        console.warn('User role not found, skipping role assignment')
+        console.warn('User role not found, skipping role assignment', error)
       }
 
       await this.verificationTokenService.createVerificationToken({

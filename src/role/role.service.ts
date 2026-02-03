@@ -95,7 +95,7 @@ export class RoleService {
       // Delete related records first to avoid foreign key constraint violations
       await this.prisma.rolePermission.deleteMany({ where: { role_id: id } })
       await this.prisma.roleUser.deleteMany({ where: { role_id: id } })
-      
+
       return await this.prisma.role.delete({ where: { id } })
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {

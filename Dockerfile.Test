@@ -7,18 +7,15 @@ RUN apt-get update -y && apt-get install -y openssl procps && rm -rf /var/lib/ap
 
 WORKDIR /app
 
-COPY package.json .
+COPY package.json pnpm-lock.yaml ./
 
-RUN npm i -g pnpm
-
-RUN pnpm i
+RUN npm i -g pnpm && pnpm i
 
 COPY . .
 
-COPY .env.test .env
-
+RUN pnpm db:generate
 RUN pnpm run nest:build
 
-CMD ["sh", "-c", "pnpm db:generate && pnpm db:push && pnpm nest:dev"]
+CMD ["sh", "-c", "pnpm db:push && pnpm nest:start"]
 
 EXPOSE 8000

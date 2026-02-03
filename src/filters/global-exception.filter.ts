@@ -17,7 +17,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = exception.getStatus()
       const exceptionResponse = exception.getResponse()
       message =
-        typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message || message
+        typeof exceptionResponse === 'object' && exceptionResponse !== null && 'message' in exceptionResponse
+          ? (exceptionResponse as { message: string }).message
+          : typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : message
     } else if (exception instanceof JsonWebTokenError || exception instanceof TokenExpiredError) {
       status = HttpStatus.UNAUTHORIZED
       message = 'Invalid or expired token'
