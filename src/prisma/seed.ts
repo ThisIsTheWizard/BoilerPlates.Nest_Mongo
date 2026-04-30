@@ -12,8 +12,8 @@ async function main() {
       try {
         return await prisma.role.create({ data: { name } })
       } catch (error) {
-          if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-            return prisma.role.findUnique({ where: { name } })
+        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+          return prisma.role.findUnique({ where: { name } })
         }
         throw error
       }
@@ -28,21 +28,19 @@ async function main() {
   const permissions: Array<Permission | null> = []
   for (const module of modules) {
     for (const action of actions) {
-      const permission = await prisma.permission
-        .create({ data: { action, module } })
-        .catch((error) => {
-          if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-            return prisma.permission.findUnique({
-              where: {
-                action_module: {
-                  action,
-                  module
-                }
+      const permission = await prisma.permission.create({ data: { action, module } }).catch((error) => {
+        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+          return prisma.permission.findUnique({
+            where: {
+              action_module: {
+                action,
+                module
               }
-            })
-          }
-          throw error
-        })
+            }
+          })
+        }
+        throw error
+      })
       permissions.push(permission)
     }
   }
